@@ -1,34 +1,36 @@
-# reddit-content-assistant
+# Reddit Content Assistant
 
-Personal Reddit cross-posting helper for the [melyx.dev](https://melyx.dev) blog.
+Personal Reddit cross-posting helper for the [melyx.dev](https://melyx.dev) blog. **Manual-trigger only.**
 
-Manual-trigger only. One click = one self-post to one subreddit.
+## Purpose
 
-## What this tool does
+This tool helps convert blog content I author on melyx.dev into Reddit-friendly self-posts and submit them to a single subreddit per click.
 
-When I publish an original article on my blog at `melyx.dev/blog/`, this helper lets me:
+## How it works
 
-1. Generate a Reddit-friendly summary using my own AI pipeline
-2. Manually review and edit the summary
-3. Submit a single self-post to one chosen subreddit, after I click "Distribute"
+1. I write an original article on `melyx.dev/blog/`
+2. The admin UI generates a Reddit-friendly draft using AI
+3. I read the draft, edit it, choose the subreddit
+4. I click **Distribute** — exactly one self-post is submitted
 
-## What this tool does **NOT** do
+That's the entire workflow. There is no scheduler, no queue, no auto-retry, no batch.
 
-- ❌ Comment on other users' posts
-- ❌ Vote on any content
-- ❌ Send DMs / chat messages
-- ❌ Scrape user data or subreddit content
-- ❌ Run on a schedule / cron / webhook
-- ❌ Bulk-post to multiple subreddits at once
-- ❌ Cross-post anyone else's content (I am the author of every blog post)
+## Safety policy
+
+- ✅ Human-triggered posting only — every post requires a manual button click
+- ✅ Used only in allowed subreddits (listed below)
+- ❌ No automation or mass posting
+- ❌ No scraping or vote manipulation
+- ❌ No commenting, no DMs, no chat
+- ❌ No loop, no cron, no webhook auto-fire
 
 ## Volume
 
-- ~1–3 posts per week total across all my chosen subreddits
+- ~1–3 posts per week total
 - Each post is a long-form, on-topic submission
-- Each post is approved by me by clicking a button after reading the AI-generated draft
+- Each post is reviewed by me before submission
 
-## Subreddits I post to
+## Allowed subreddits
 
 Only when an article is genuinely on-topic for that subreddit, and never more
 than once per subreddit per week:
@@ -39,60 +41,27 @@ than once per subreddit per week:
 
 ## Tech stack
 
-| Layer        | Choice                                        |
-|--------------|-----------------------------------------------|
-| Trigger      | Manual click on `melyx.dev/blog/admin/`       |
-| Backend      | Node.js + Fastify (`news.melyx.id`)           |
-| AI summary   | Groq Llama 3.3 70B via my own gateway (`api.aigatecloud.com/v1/chat/completions`) |
-| Reddit auth  | OAuth 2.0 **password grant** on a script-type app |
-| HTTP client  | Native `fetch` (Node 20)                      |
-| Rate limit   | Manual — I click once per intended post       |
-
-## How a post happens (technical flow)
-
-```
-melyx.dev/blog/admin/
-  └─ Author writes article + clicks 🪄 Generate summaries
-       └─ POST /blog/admin/api/summarize → AI returns reddit summary draft
-  └─ Author reviews + edits in textarea
-  └─ Author clicks 🚀 Distribute
-       └─ POST /blog/admin/api/distribute → news.melyx.id /api/share/manual-post
-            └─ Calls postToReddit() (this repo's function)
-                 └─ getRedditToken() — OAuth password grant, cached 60min
-                 └─ POST https://oauth.reddit.com/api/submit
-                      → returns post URL
-```
-
-## Compliance notes
-
-- **Identity**: I am the author of every article. The bot only re-posts my own
-  original blog content.
-- **Consent**: Each post is preceded by a manual button click after I read the
-  draft. There is no automated decision-making about what gets posted.
-- **Rate limits**: Reddit's 60-req/min limit is never approached because manual
-  triggering caps me at well under 10 requests/day.
-- **Account hygiene**: The script account exists solely for this purpose,
-  has 2FA disabled (required for password grant), and is not used for moderation,
-  voting, or commenting.
-- **User-Agent**: All requests send `melyxdev-blog-sync/1.0 by <username>` per
-  Reddit API guidelines.
+| Layer        | Choice                                                                              |
+|--------------|-------------------------------------------------------------------------------------|
+| Trigger      | Manual click on `melyx.dev/blog/admin/`                                             |
+| Backend      | Node.js + Fastify (`news.melyx.id`)                                                 |
+| AI summary   | Groq Llama 3.3 70B via my own gateway (`api.aigatecloud.com/v1/chat/completions`)   |
+| Reddit auth  | OAuth 2.0 **password grant** on a script-type app                                   |
+| HTTP client  | Native `fetch` (Node 20)                                                            |
+| Rate limit   | Manual — under 10 requests/day, well below Reddit's 60/min limit                    |
 
 ## Files
 
-- `reddit-poster.js` — the only logic in this repo: `getRedditToken()` + `postToReddit()`.
-  Drop into any Node 20+ project, set the 4 env vars, call `postToReddit({ subreddit, title, text })`.
+- `reddit-poster.js` — only Reddit-touching code: `getRedditToken()` + `postToReddit()`
+- `usage-example.md` — drop-in usage with required env vars
 
-## Why a separate Reddit module?
+## Compliance summary
 
-The full distribution pipeline (X / Facebook / dev.to / Dublin24h / Reddit) lives
-in a private monorepo. This file is split out so reviewers can audit the exact
-Reddit-touching code without seeing unrelated tokens.
+- **Identity**: I'm the author of every blog post that gets cross-posted
+- **Consent**: A button click precedes every API call
+- **Account hygiene**: The script account is dedicated to this purpose, 2FA disabled (required for password grant), no moderation / voting / commenting
+- **User-Agent**: All requests send `melyxdev-blog-sync/1.0 by <username>` per Reddit API guidelines
 
 ## Contact
 
 linhmentor@gmail.com — Reddit username available on the API access ticket.
-
----
-
-Source available upon request for any unscoped functions called from this file.
-None of the unscoped functions reach Reddit.
